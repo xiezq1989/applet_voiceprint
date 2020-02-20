@@ -345,7 +345,8 @@ def recognition():
     return json.dumps(res_dic)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000, debug=True,ssl_context='adhoc')
+    app.run(host='0.0.0.0', port=3000, debug=True)
+    #app.run(host='0.0.0.0', port=3000, debug=True,ssl_context='adhoc')
     #app.run(host='192.168.1.232', port=6006, debug=True)
 
 
