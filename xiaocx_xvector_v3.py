@@ -311,7 +311,7 @@ def recognition():
                     audiofile_db.columns=['wechat_id','file_url']
                     # file_url替换成下载连接
                     audiofile_db['file_url'] = audiofile_db['file_url'].map(
-                        lambda x: x.replace('..', 'http://203.195.187.70:7878'))
+                        lambda x: x.replace('../files/voice_register', 'https://banana-b08n2oze.pai.tcloudbase.com:7878/download'))
                         #lambda x: x.replace('..', 'http://192.168.1.232:7878'))
                     # 返回包含人员信息、文件信息和匹配角度的整体结果
                     result=angle_mat.join(audiofile_db).merge(info_db,left_on='wechat_id',right_on=info_db.index)
@@ -345,8 +345,9 @@ def recognition():
     return json.dumps(res_dic)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    #app.run(host='0.0.0.0', port=3000, debug=True)
     #app.run(host='0.0.0.0', port=3000, debug=True,ssl_context='adhoc')
+    app.run(host='0.0.0.0', port=6006, debug=True,ssl_context=('/data/ssl/ssl.crt','/data/ssl/ssl.key'))
     #app.run(host='192.168.1.232', port=6006, debug=True)
 
 
