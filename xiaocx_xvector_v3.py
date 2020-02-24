@@ -316,6 +316,8 @@ def recognition():
                     # 返回包含人员信息、文件信息和匹配角度的整体结果
                     result=angle_mat.join(audiofile_db).merge(info_db,left_on='wechat_id',right_on=info_db.index)
                     result.rename(columns={0:'score'}, inplace=True)
+                    # 以分数排序 
+                    result.sort_values(by = 'score',axis = 0,ascending = True,inplace=True)
                     # 返回前30
                     result=result.iloc[:30,:]
                     # 以行方向转为字典格式
