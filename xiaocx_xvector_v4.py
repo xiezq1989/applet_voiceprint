@@ -125,8 +125,12 @@ def ext_xvector(audio_file,save_dir,train_dir):
 def get_openid(jscode):
     try:
         url = "https://api.weixin.qq.com/sns/jscode2session"
-        appid = 'wxbcacb6dcd28daebd'
-        secret = 'd5681f69cc19462001193bfa82516397'
+        #appid = 'wxbcacb6dcd28daebd'
+        #appid = 'wx4ed9f71454cb71f6'
+        appid = 'wx4ce9b5aabb78cd59'
+        #secret = 'd5681f69cc19462001193bfa82516397'
+        #secret = '74e7b200338b4799ef7f6e9c4412c811'
+        secret = '3b8a74f78e53707c540fc0b3477d18aa'
         jscode=jscode
         newurl = url + "?appid=" + appid + "&secret=" + secret + "&js_code=" + jscode + "&grant_type=authorization_code"
         r = requests.get(newurl)
@@ -353,6 +357,85 @@ def recognition():
         res_dic['code'] = 0
     #print(res_dic)
     return json.dumps(res_dic)
+
+###DENOISE####
+# 获取分离人声与噪音
+def denoise_voice(audio_file):
+    # 获取文件名及后缀
+    #filename, filetype = audio_file.filename.split('.')
+    filename, filetype = os.path.splitext(audio_file.filename)
+    # 去掉后缀名中的.
+    filetype=filetype.replace('.','')
+    print(filename,filetype)
+    if filetype in ['MP3', 'mp3','wav', 'WAV']:
+        # 如果后缀为wav/mp3文件直接保存音频文件
+        save_file_path = os.path.join(app.root_path, 'denoise_files/mp3wav', audio_file.filename)
+        audio_file.save(save_file_path)
+    elif filetype in [ 'm4a', 'M4A']:
+        # 首先保存音频文件
+        file_path = os.path.join(app.root_path, 'denoise_files/init_voice', audio_file.filename)
+        audio_file.save(file_path)
+        # 转换为wav格式
+        output_filepath = os.path.join(app.root_path, 'denoise_files/mp3wav', filename + '.wav')
+        save_file_path = format_converter(file_path, output_filepath)
+    # 计算MD5
+    md5=get_md5(save_file_path)
+    file_name_md5 = md5 + '.wav'
+    # MD5值重命名音频文件
+    new_file_path = os.path.join(app.root_path, 'denoise_files/mp3wav', file_name_md5)
+    os.rename(save_file_path, new_file_path)
+
+    # 降噪并返回文件
+    try:
+        status=os.system('spleeter separate -i %s -p spleeter:2stems -o denoise_files/output' % new_file_path)
+        if status==0:
+            file_list=os.popen('ls denoise_files/output/%s' % md5).read().strip().split('\n')
+            if len(file_list)>0:
+                return os.path.join('mp3wav', file_name_md5),'output/'+md5+'/accompaniment.wav', 'output/'+md5+'/vocals.wav'
+
+    except Exception as e:
+        print(e)
+
+
+@app.route("/denoise", methods=["POST"])
+def denoise():
+    res_dic = {}
+    if flask.request.method == "POST":
+        # if flask.request.files.get("audio") and flask.request.form.get("channel"):
+        if flask.request.files.get("audio"):
+            try:
+                # 获取上传的待降噪语音文件
+                audio_file = flask.request.files["audio"]
+                filename,filetype = audio_file.filename.split('.')
+                # 如果后缀符合条件
+                if filetype in app.config['ALLOWED_EXTENSIONS']:
+                    # 获取待识别音频文件向量列表
+                    init_file,accompaniment_file,vocals_file =denoise_voice(audio_file)
+                    http_url='https://banana-b08n2oze.pai.tcloudbase.com:7979/download?url='
+                    accompaniment_url=http_url+accompaniment_file
+                    vocals_url = http_url  + vocals_file
+                    init_file_url = http_url  + init_file
+                    url_dic={'init_file_url':init_file_url,'noise_file_url':accompaniment_url,'person_file_url':vocals_url}
+                    res_dic['data'] = url_dic
+                    res_dic['code'] = 1
+                # 如果后缀不符合条件，返回提示
+                else:
+                  return json.dumps({'data':'Unsupported media types. Must be wav mp3 or m4a!','code':0})
+            except  Exception as e:
+                res_dic['data']=str(e)
+                res_dic['code']=0
+        else:
+            res_dic['data'] = 'Parameters are not right, did not receive the audio parameter'
+            res_dic['code'] = 0
+    else:
+        res_dic['data'] = 'The method must be POST'
+        res_dic['code'] = 0
+    #print(res_dic)
+    return json.dumps(res_dic)
+
+
+
+
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', port=3000, debug=True)
